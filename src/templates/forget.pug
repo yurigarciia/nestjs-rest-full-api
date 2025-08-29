@@ -1,0 +1,86 @@
+doctype html
+html(lang="pt-BR")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    title Recuperação de Senha — #{appName}
+  body(style="margin:0;padding:0;background:#f4f8ff;")
+    // Preheader (oculto)
+    div(style="display:none;font-size:1px;color:#f4f8ff;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;")
+      | Link para recuperar sua senha de #{appName}.
+
+    table(role="presentation", cellpadding="0", cellspacing="0", width="100%", style="background:#f4f8ff;")
+      tr
+        td(align="center", style="padding:24px 12px;")
+          // Container
+          table(role="presentation", cellpadding="0", cellspacing="0", width="600", style="width:100%;max-width:600px;background:#ffffff;border-radius:12px;box-shadow:0 3px 12px rgba(0,0,0,.06);")
+            // Header
+            tr
+              td(style="padding:24px 32px 0;text-align:center;")
+                div(style="font-family:Arial,Helvetica,sans-serif;font-size:20px;color:#1b3a57;font-weight:700;")
+                  | #{appName}
+                div(style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#6b7a90;margin-top:4px;")
+                  | Recuperação de Senha
+
+            // Ilustração lúdica
+            tr
+              td(style="padding:24px 32px 0;")
+                table(role="presentation", width="100%")
+                  tr
+                    td(align="center")
+                      div(style="font-size:64px;line-height:1;") 🔐
+
+            // Saudação
+            tr
+              td(style="padding:8px 32px 0;")
+                h1(style="font-family:Arial,Helvetica,sans-serif;margin:12px 0;color:#0c2d48;font-size:22px;")
+                  | Olá, #{userName}!
+
+            // Texto
+            tr
+              td(style="padding:0 32px 16px;")
+                p(style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#334e68;margin:0;")
+                  | Recebemos um pedido para redefinir sua senha no #{appName}. Para continuar, clique no botão abaixo:
+
+            // Botão CTA
+            tr
+              td(align="center", style="padding:16px 32px 24px;")
+                a(href="#{resetLink}", target="_blank", style="background:#5ec2f2;color:#ffffff;text-decoration:none;font-family:Arial,Helvetica,sans-serif;font-weight:700;font-size:16px;padding:14px 24px;border-radius:8px;display:inline-block;")
+                  | Redefinir minha senha
+                div(style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#6b7a90;margin-top:12px;")
+                  | Se o botão não funcionar, copie e cole este link no seu navegador:
+                div(style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#006daa;word-break:break-all;")
+                  a(href="#{resetLink}", target="_blank", style="color:#006daa;text-decoration:underline;")
+                    | #{resetLink}
+
+            // Expiração (opcional)
+            if expiryHours
+              tr
+                td(style="padding:0 32px 12px;")
+                  p(style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#6b7a90;margin:0;")
+                    | Este link expira em #{expiryHours} horas por segurança.
+
+            // Aviso
+            tr
+              td(style="padding:0 32px 24px;")
+                p(style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#6b7a90;line-height:1.6;margin:0;")
+                  | Não foi você? Ignore este e-mail ou entre em contato com nosso suporte.
+
+            // Rodapé
+            tr
+              td(style="padding:16px 32px 32px;border-top:1px solid #e6effa;")
+                table(role="presentation", width="100%")
+                  tr
+                    td(align="left")
+                      div(style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#6b7a90;")
+                        | Obrigado,
+                        br
+                        | Equipe #{appName}
+                    td(align="right")
+                      span(style="display:inline-block;background:#e8f6ff;color:#1b6ca8;font-family:Arial,Helvetica,sans-serif;font-size:11px;padding:6px 10px;border-radius:999px;")
+                        | • Fique tranquilo — nós ajudamos você!
+
+            tr
+              td(align="center", style="padding:0 12px 24px;")
+                div(style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#9aa8b3;")
+                  | © #{year} #{companyName}. Todos os direitos reservados.
