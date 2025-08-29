@@ -10,6 +10,9 @@ import { AuthRegisterDTO } from './dto/auth-register.dto';
 import * as bcrypt from 'bcrypt';
 import { MailerService } from '@nestjs-modules/mailer';
 
+// DA PRA MELHORAR A LOGICA DOS TOKENS, GUARDANDO ELES EM UMA TABELA NO BANCO
+// PARA TER O CONTROLE DE QUANTOS TOKENS ATIVOS UM USUÁRIO TEM.
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -103,7 +106,7 @@ export class AuthService {
         resetLink: token,
         expiryHours: '1',
         year: new Date().getFullYear(),
-        companyName: 'DevMeta',
+        companyName: 'Dev',
         appName: 'App',
       },
     });

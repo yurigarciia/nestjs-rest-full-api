@@ -72,6 +72,7 @@ export class AuthController {
     )
     photo: Express.Multer.File,
   ) {
+    // ALTERAR LÓGICA PARA SUBIR EM BUCKET, NO FUTURO
     const path = join(
       __dirname,
       '../..',

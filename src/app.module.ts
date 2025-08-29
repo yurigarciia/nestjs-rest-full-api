@@ -33,7 +33,7 @@ import { PugAdapter } from '@nestjs-modules/mailer/dist/adapters/pug.adapter';
     forwardRef(() => AuthModule),
     MailerModule.forRoot({
       transport: {
-        // SMTP fake ethereal.email
+        // SMTP FAKE ethereal.email | CRIE UM PARA TESTAR -> https://ethereal.email/
         host: 'smtp.ethereal.email',
         port: 587,
         secure: false,

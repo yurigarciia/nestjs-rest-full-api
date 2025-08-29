@@ -4,6 +4,7 @@ import { writeFile } from 'fs/promises';
 @Injectable()
 export class FileService {
   upload(file: Express.Multer.File, path: string) {
+    // ALTERAR LÓGICA PARA SUBIR EM BUCKET, NO FUTURO
     return writeFile(path, file.buffer);
   }
 
