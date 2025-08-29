@@ -138,6 +138,6 @@ export class AuthService {
       throw new BadRequestException(e);
     }
     // DA PRA MELHORAR A LÓGICA, GUARDANDO OS TOKENS DE RESET NO BANCO
-    // PARA NÃO USAR O MESMO TOKEN MAIS DE UMA VEZ!
+    // PARA NÃO USAR O MESMO TOKEN MAIS DE UMA VEZ
   }
 }
