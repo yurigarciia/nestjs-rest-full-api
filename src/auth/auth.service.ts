@@ -4,11 +4,12 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { User } from 'generated/prisma';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { AuthRegisterDTO } from './dto/auth-register.dto';
 import * as bcrypt from 'bcrypt';
 import { MailerService } from '@nestjs-modules/mailer';
+import { UserEntity } from 'src/user/entity/user.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 // DA PRA MELHORAR A LOGICA DOS TOKENS, GUARDANDO ELES EM UMA TABELA NO BANCO
 // PARA TER O CONTROLE DE QUANTOS TOKENS ATIVOS UM USUÁRIO TEM.
@@ -17,24 +18,29 @@ import { MailerService } from '@nestjs-modules/mailer';
 export class AuthService {
   constructor(
     private readonly jwtService: JwtService,
-    private readonly prisma: PrismaService,
     private readonly mailer: MailerService,
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
   ) {}
 
-  async createToken(user: User) {
+  async createToken(user: UserEntity) {
     const payload = { id: user.id, name: user.name, email: user.email };
+    console.log(user.id);
     const options = {
       expiresIn: '7d',
       subject: user.id.toString(),
       issuer: 'app-backend-login',
       audience: 'app-users',
+      secret: String(process.env.JWT_SECRET),
     };
     return { accessToken: this.jwtService.sign(payload, options) };
   }
 
   checkToken(token: string) {
     try {
-      const decoded = this.jwtService.verify(token);
+      const decoded = this.jwtService.verify(token, {
+        secret: String(process.env.JWT_SECRET),
+      });
       return decoded;
     } catch (e) {
       throw new BadRequestException(e);
@@ -51,9 +57,10 @@ export class AuthService {
   }
 
   async login(email: string, password: string) {
-    const user = await this.prisma.user.findFirst({
+    const user = await this.userRepository.findOne({
       where: { email },
     });
+    console.log(user);
     if (!user || !(await bcrypt.compare(password, user.password))) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -64,12 +71,10 @@ export class AuthService {
   }
 
   async register({ email, password, name }: AuthRegisterDTO) {
-    const user = await this.prisma.user.create({
-      data: {
-        email,
-        password: await bcrypt.hash(password, await bcrypt.genSalt()),
-        name,
-      },
+    const user = await this.userRepository.save({
+      email,
+      password: await bcrypt.hash(password, await bcrypt.genSalt()),
+      name,
     });
     return {
       acessToken: (await this.createToken(user)).accessToken,
@@ -78,7 +83,7 @@ export class AuthService {
   }
 
   async forget(email: string) {
-    const user = await this.prisma.user.findFirst({
+    const user = await this.userRepository.findOne({
       where: { email },
     });
     if (!user) {
@@ -94,6 +99,7 @@ export class AuthService {
         subject: user.id.toString(),
         issuer: 'forget',
         audience: 'app-users',
+        secret: String(process.env.JWT_SECRET),
       },
     );
 
@@ -116,31 +122,42 @@ export class AuthService {
 
   async reset(token: string, newPassword: string) {
     try {
-      const decoded = this.jwtService.verify(token, {
+      const decoded = this.jwtService.verify<{ id?: number | string }>(token, {
         issuer: 'forget',
         audience: 'app-users',
+        secret: String(process.env.JWT_SECRET),
       });
 
-      if (isNaN(Number(decoded.id))) {
+      const rawId = decoded?.id;
+      if (rawId === undefined || rawId === null || isNaN(Number(rawId))) {
         throw new BadRequestException('Invalid token');
       }
 
-      const userId = decoded.id;
-      const user = await this.prisma.user.update({
-        where: { id: Number(userId) },
-        data: {
-          password: await bcrypt.hash(
-            newPassword.trim(),
-            await bcrypt.genSalt(),
-          ),
-        },
-      });
+      const userId = Number(rawId);
+      const hashed = await bcrypt.hash(
+        newPassword.trim(),
+        await bcrypt.genSalt(12),
+      );
 
+      const result = await this.userRepository.update(
+        { id: userId },
+        { password: hashed },
+      );
+
+      if (result.affected === 0) {
+        throw new BadRequestException('User not found');
+      }
+
+      const user = await this.userRepository.findOneBy({ id: userId });
       return this.createToken(user);
-    } catch (e) {
-      throw new BadRequestException(e);
+    } catch (err: any) {
+      if (err?.name === 'TokenExpiredError') {
+        throw new BadRequestException('Token expired');
+      }
+      throw new BadRequestException(err?.message ?? 'Invalid token');
     }
-    // DA PRA MELHORAR A LÓGICA, GUARDANDO OS TOKENS DE RESET NO BANCO
-    // PARA NÃO USAR O MESMO TOKEN MAIS DE UMA VEZ
   }
+
+  // DA PRA MELHORAR A LÓGICA, GUARDANDO OS TOKENS DE RESET NO BANCO
+  // PARA NÃO USAR O MESMO TOKEN MAIS DE UMA VEZ
 }

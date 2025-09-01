@@ -30,8 +30,9 @@ export class AuthGuard implements CanActivate {
       request.user = await this.userService.findOne(decode.id);
 
       return true;
-    } catch {
-      throw new UnauthorizedException('Invalid token');
+    } catch (e) {
+      console.log(e);
+      throw new UnauthorizedException('Invalid token', e);
     }
   }
 }

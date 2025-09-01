@@ -14,6 +14,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { PugAdapter } from '@nestjs-modules/mailer/dist/adapters/pug.adapter';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
   imports: [
@@ -38,12 +39,12 @@ import { PugAdapter } from '@nestjs-modules/mailer/dist/adapters/pug.adapter';
         port: 587,
         secure: false,
         auth: {
-          user: 'breana.vandervort@ethereal.email',
-          pass: 'y9RRxmeP6q3MHmnjjy',
+          user: 'elmer9@ethereal.email',
+          pass: 'pf1FBXPFUGf9TDpJAD',
         },
       },
       defaults: {
-        from: '"No Reply" <breana.vandervort@ethereal.email>',
+        from: '"No Reply" <elmer9@ethereal.email>',
       },
       template: {
         dir: __dirname + '/templates',
@@ -52,6 +53,16 @@ import { PugAdapter } from '@nestjs-modules/mailer/dist/adapters/pug.adapter';
           strict: true,
         },
       },
+    }),
+    TypeOrmModule.forRoot({
+      type: 'mysql',
+      host: process.env.DB_HOST,
+      port: Number(process.env.DB_PORT),
+      username: process.env.DB_USERNAME,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_DATABASE,
+      autoLoadEntities: true,
+      synchronize: process.env.ENV === 'development',
     }),
   ],
   controllers: [AppController],
