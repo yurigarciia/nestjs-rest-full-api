@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { FileModule } from 'src/file/file.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserEntity } from 'src/user/entity/user.entity';
+import { PasswordResetToken } from './entity/token.entity';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { UserEntity } from 'src/user/entity/user.entity';
     }),
     FileModule,
     TypeOrmModule.forFeature([UserEntity]),
+    TypeOrmModule.forFeature([PasswordResetToken]),
   ],
   controllers: [AuthController],
   providers: [AuthService],

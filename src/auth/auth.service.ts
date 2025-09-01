@@ -10,6 +10,7 @@ import { MailerService } from '@nestjs-modules/mailer';
 import { UserEntity } from 'src/user/entity/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { PasswordResetToken } from './entity/token.entity';
 
 // DA PRA MELHORAR A LOGICA DOS TOKENS, GUARDANDO ELES EM UMA TABELA NO BANCO
 // PARA TER O CONTROLE DE QUANTOS TOKENS ATIVOS UM USUÁRIO TEM.
@@ -21,6 +22,8 @@ export class AuthService {
     private readonly mailer: MailerService,
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
+    @InjectRepository(PasswordResetToken)
+    private readonly tokenRepository: Repository<PasswordResetToken>,
   ) {}
 
   async createToken(user: UserEntity) {
@@ -103,6 +106,13 @@ export class AuthService {
       },
     );
 
+    await this.tokenRepository.save({
+      token,
+      userId: user.id,
+      used: false,
+      usedAt: null,
+    });
+
     await this.mailer.sendMail({
       to: user.email,
       subject: 'Recuperação de Senha',
@@ -121,6 +131,17 @@ export class AuthService {
   }
 
   async reset(token: string, newPassword: string) {
+    const tokenEntity = await this.tokenRepository.findOne({
+      where: { token },
+    });
+
+    if (!tokenEntity) {
+      throw new BadRequestException('Token inválido');
+    }
+    if (tokenEntity.used) {
+      throw new BadRequestException('Token já utilizado');
+    }
+
     try {
       const decoded = this.jwtService.verify<{ id?: number | string }>(token, {
         issuer: 'forget',
@@ -130,7 +151,7 @@ export class AuthService {
 
       const rawId = decoded?.id;
       if (rawId === undefined || rawId === null || isNaN(Number(rawId))) {
-        throw new BadRequestException('Invalid token');
+        throw new BadRequestException('Token inválido');
       }
 
       const userId = Number(rawId);
@@ -145,19 +166,20 @@ export class AuthService {
       );
 
       if (result.affected === 0) {
-        throw new BadRequestException('User not found');
+        throw new BadRequestException('Usuário não encontrado');
       }
+
+      tokenEntity.used = true;
+      tokenEntity.usedAt = new Date();
+      await this.tokenRepository.save(tokenEntity);
 
       const user = await this.userRepository.findOneBy({ id: userId });
       return this.createToken(user);
     } catch (err: any) {
       if (err?.name === 'TokenExpiredError') {
-        throw new BadRequestException('Token expired');
+        throw new BadRequestException('Token expirado');
       }
-      throw new BadRequestException(err?.message ?? 'Invalid token');
+      throw new BadRequestException(err?.message ?? 'Token inválido');
     }
   }
-
-  // DA PRA MELHORAR A LÓGICA, GUARDANDO OS TOKENS DE RESET NO BANCO
-  // PARA NÃO USAR O MESMO TOKEN MAIS DE UMA VEZ
 }
