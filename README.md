@@ -14,11 +14,16 @@
 Repositório de um Backend feito em [Nest](https://github.com/nestjs/nest) com TS, base para qualquer aplicação backend, com CRUD completo de auth e usuários (adm-side), conta com módulos prontos de envio de emails, upload de arquivos, conexão com banco de dados e sistema de segurança baseado em papéis.
 
 ## Setup do Projeto
-O projeto está configurado para rodar com um Banco de Dados MySQL local, cuja conexão consta na .env.example, para executar o projeto é necessário conecta-lo a um banco de dados. Após instalar o projeto, execute o comando do Prisma para identificar o seu banco de dados.
+O projeto está configurado para rodar com um Banco de Dados MySQL local, cuja conexão consta na .env.example, para executar o projeto é necessário conecta-lo a um banco de dados e prepará-lo.
 
 ```bash
 $ npm install
 ```
+Após usar o npm install, indique a conexão com seu banco MySQL e execute o seguinte comando para preparar o banco de dados:
+```bash
+$ npm run migrate:up
+```
+
 
 ## Compilação & Execução do projeto
 
@@ -31,19 +36,6 @@ $ npm run dev
 
 # production mode
 $ npm run prod
-```
-
-## Execução de Testes
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
 ```
 
 ## Contatos

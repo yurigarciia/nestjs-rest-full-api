@@ -10,10 +10,8 @@ import { MailerService } from '@nestjs-modules/mailer';
 import { UserEntity } from 'src/user/entity/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { PasswordResetToken } from './entity/token.entity';
-
-// DA PRA MELHORAR A LOGICA DOS TOKENS, GUARDANDO ELES EM UMA TABELA NO BANCO
-// PARA TER O CONTROLE DE QUANTOS TOKENS ATIVOS UM USUÁRIO TEM.
+import { PasswordResetToken } from './entity/password-reset-token.entity';
+import { BearerToken } from 'src/user/entity/user-tokens.entity';
 
 @Injectable()
 export class AuthService {
@@ -24,22 +22,51 @@ export class AuthService {
     private readonly userRepository: Repository<UserEntity>,
     @InjectRepository(PasswordResetToken)
     private readonly tokenRepository: Repository<PasswordResetToken>,
+    @InjectRepository(BearerToken)
+    private readonly bearerTokenRepository: Repository<BearerToken>,
   ) {}
 
   async createToken(user: UserEntity) {
+    await this.bearerTokenRepository.update(
+      { userId: user.id, active: true },
+      { active: false },
+    );
+
     const payload = { id: user.id, name: user.name, email: user.email };
-    console.log(user.id);
+    const expiresIn = 60 * 60 * 24 * 7;
+    const expiresAt = new Date(Date.now() + expiresIn * 1000);
+
     const options = {
-      expiresIn: '7d',
+      expiresIn: `${expiresIn}s`,
       subject: user.id.toString(),
       issuer: 'app-backend-login',
       audience: 'app-users',
       secret: String(process.env.JWT_SECRET),
     };
-    return { accessToken: this.jwtService.sign(payload, options) };
+
+    const token = this.jwtService.sign(payload, options);
+
+    await this.bearerTokenRepository.save({
+      token,
+      userId: user.id,
+      active: true,
+      expiresAt,
+    });
+
+    return { accessToken: token };
   }
 
-  checkToken(token: string) {
+  async checkToken(token: string) {
+    const tokenEntity = await this.bearerTokenRepository.findOne({
+      where: { token, active: true },
+    });
+    if (!tokenEntity) {
+      throw new UnauthorizedException('Token inválido ou inativo');
+    }
+    if (tokenEntity.expiresAt < new Date()) {
+      throw new UnauthorizedException('Token expirado');
+    }
+
     try {
       const decoded = this.jwtService.verify(token, {
         secret: String(process.env.JWT_SECRET),
@@ -63,7 +90,6 @@ export class AuthService {
     const user = await this.userRepository.findOne({
       where: { email },
     });
-    console.log(user);
     if (!user || !(await bcrypt.compare(password, user.password))) {
       throw new UnauthorizedException('Invalid credentials');
     }
