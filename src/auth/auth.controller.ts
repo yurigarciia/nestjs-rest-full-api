@@ -89,4 +89,12 @@ export class AuthController {
 
     return { sucess: true };
   }
+
+  @Post('refresh')
+  async refresh(@Body('refreshToken') refreshToken: string) {
+    if (!refreshToken) {
+      throw new BadRequestException('Refresh token é obrigatório');
+    }
+    return this.authService.refreshToken(refreshToken);
+  }
 }

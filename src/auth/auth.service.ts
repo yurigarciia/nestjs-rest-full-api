@@ -12,6 +12,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PasswordResetToken } from './entity/password-reset-token.entity';
 import { BearerToken } from 'src/user/entity/user-tokens.entity';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -26,18 +27,24 @@ export class AuthService {
     private readonly bearerTokenRepository: Repository<BearerToken>,
   ) {}
 
-  async createToken(user: UserEntity) {
+  async createToken(
+    user: UserEntity,
+    reuseRefreshToken?: string,
+    reuseRefreshExpiresAt?: Date,
+  ) {
     await this.bearerTokenRepository.update(
       { userId: user.id, active: true },
       { active: false },
     );
 
+    // Access token
     const payload = { id: user.id, name: user.name, email: user.email };
-    const expiresIn = 60 * 60 * 24 * 7;
-    const expiresAt = new Date(Date.now() + expiresIn * 1000);
+    const accessExpiresIn = 60 * 60 * 24 * 7; // 7 dias
+    // const accessExpiresIn = 60; // 60 segundos para teste de refresh token
+    const expiresAt = new Date(Date.now() + accessExpiresIn * 1000);
 
     const options = {
-      expiresIn: `${expiresIn}s`,
+      expiresIn: `${accessExpiresIn}s`,
       subject: user.id.toString(),
       issuer: 'app-backend-login',
       audience: 'app-users',
@@ -46,14 +53,94 @@ export class AuthService {
 
     const token = this.jwtService.sign(payload, options);
 
+    // Refresh token
+    let refreshToken: string;
+    let refreshExpiresAt: Date;
+    if (reuseRefreshToken && reuseRefreshExpiresAt) {
+      refreshToken = reuseRefreshToken;
+      refreshExpiresAt = reuseRefreshExpiresAt;
+    } else {
+      refreshToken = crypto.randomBytes(64).toString('hex');
+      const refreshExpiresIn = 60 * 60 * 24 * 30; // 30 dias
+      refreshExpiresAt = new Date(Date.now() + refreshExpiresIn * 1000);
+    }
+
     await this.bearerTokenRepository.save({
       token,
+      refreshToken,
       userId: user.id,
       active: true,
       expiresAt,
+      refreshExpiresAt,
     });
 
-    return { accessToken: token };
+    return {
+      accessToken: token,
+      refreshToken,
+      expiresIn: accessExpiresIn,
+      refreshExpiresIn: Math.floor(
+        (refreshExpiresAt.getTime() - Date.now()) / 1000,
+      ),
+    };
+  }
+
+  async refreshToken(oldRefreshToken: string) {
+    const tokenEntity = await this.bearerTokenRepository.findOne({
+      where: { refreshToken: oldRefreshToken },
+      order: { id: 'DESC' },
+    });
+
+    if (!tokenEntity) {
+      throw new UnauthorizedException('Refresh token inválido');
+    }
+
+    if (
+      tokenEntity.active &&
+      tokenEntity.refreshExpiresAt &&
+      tokenEntity.refreshExpiresAt > new Date()
+    ) {
+      const user = await this.userRepository.findOne({
+        where: { id: tokenEntity.userId },
+      });
+      if (!user) {
+        throw new UnauthorizedException('Usuário não encontrado');
+      }
+
+      tokenEntity.active = false;
+      await this.bearerTokenRepository.save(tokenEntity);
+
+      return this.createToken(
+        user,
+        tokenEntity.refreshToken,
+        tokenEntity.refreshExpiresAt,
+      );
+    }
+
+    const lastToken = await this.bearerTokenRepository.findOne({
+      where: { userId: tokenEntity.userId },
+      order: { id: 'DESC' },
+    });
+
+    if (
+      lastToken &&
+      lastToken.refreshToken === oldRefreshToken &&
+      lastToken.refreshExpiresAt &&
+      lastToken.refreshExpiresAt < new Date()
+    ) {
+      const user = await this.userRepository.findOne({
+        where: { id: tokenEntity.userId },
+      });
+      if (!user) {
+        throw new UnauthorizedException('Usuário não encontrado');
+      }
+
+      lastToken.active = false;
+      await this.bearerTokenRepository.save(lastToken);
+
+      return this.createToken(user);
+    }
+
+    throw new UnauthorizedException('Refresh token expirado ou já utilizado');
   }
 
   async checkToken(token: string) {
@@ -63,7 +150,13 @@ export class AuthService {
     if (!tokenEntity) {
       throw new UnauthorizedException('Token inválido ou inativo');
     }
-    if (tokenEntity.expiresAt < new Date()) {
+
+    const now = new Date();
+    if (
+      tokenEntity.expiresAt instanceof Date &&
+      now instanceof Date &&
+      tokenEntity.expiresAt.getTime() <= now.getTime()
+    ) {
       throw new UnauthorizedException('Token expirado');
     }
 
@@ -94,8 +187,12 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
     return {
-      acessToken: (await this.createToken(user)).accessToken,
-      user: user,
+      ...(await this.createToken(user)),
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+      },
     };
   }
 
@@ -106,8 +203,12 @@ export class AuthService {
       name,
     });
     return {
-      acessToken: (await this.createToken(user)).accessToken,
-      user: user,
+      ...(await this.createToken(user)),
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+      },
     };
   }
 

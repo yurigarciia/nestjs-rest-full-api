@@ -12,12 +12,16 @@ import { UserEntity } from 'src/user/entity/user.entity';
 
 @Entity('users_tokens')
 @Index('IDX_users_tokens_token', ['token'])
+@Index('IDX_users_tokens_refresh_token', ['refreshToken'])
 export class BearerToken {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
   @Column({ unique: true, length: 512 })
   token: string;
+
+  @Column({ length: 512, nullable: true })
+  refreshToken: string | null;
 
   @Column()
   userId: number;
@@ -31,6 +35,9 @@ export class BearerToken {
 
   @Column({ type: 'timestamp' })
   expiresAt: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  refreshExpiresAt: Date | null;
 
   @CreateDateColumn()
   createdAt: Date;

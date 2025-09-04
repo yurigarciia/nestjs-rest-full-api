@@ -15,7 +15,7 @@ Este projeto é um backend robusto feito em [NestJS](https://github.com/nestjs/n
 - Upload de arquivos
 - Integração com banco de dados MySQL
 - Sistema de segurança baseado em papéis (roles)
-- Controle de tokens JWT e reset de senha
+- Controle de tokens JWT, refresh token e reset de senha
 - Limite de requisições (throttling)
 
 ---
@@ -70,15 +70,17 @@ No arquivo `.env`:
 
 ---
 
-# 🔑 Autenticação
+# 🔑 Autenticação e Refresh Token
 
 - A autenticação é baseada em JWT.
-- Após login ou registro, o token JWT é retornado.
+- Após login ou registro, o token JWT (access token) e um refresh token são retornados.
 - Para acessar rotas protegidas, envie o token no header:
   ```http
   Authorization: Bearer <seu_token>
   ```
 - O sistema controla tokens ativos por usuário, permitindo apenas 1 token válido por vez.
+- Quando o access token expira, utilize o endpoint `POST /auth/refresh` enviando o refresh token para obter um novo access token (e, se necessário, um novo refresh token).
+- O refresh token é reutilizado enquanto estiver válido, e um novo é gerado automaticamente quando expirar.
 
 ---
 
@@ -106,6 +108,7 @@ No arquivo `.env`:
 | POST   | /auth/register | Registro de usuário              | Não       |
 | POST   | /auth/forget   | Envia e-mail de reset de senha   | Não       |
 | POST   | /auth/reset    | Redefine a senha                 | Não       |
+| POST   | /auth/refresh  | Renova o access token via refresh token | Não |
 | POST   | /auth/me       | Retorna dados do usuário logado  | Sim       |
 | POST   | /auth/photo    | Upload de foto de perfil         | Sim       |
 | GET    | /users         | Lista todos os usuários          | Sim (ADMIN)|
